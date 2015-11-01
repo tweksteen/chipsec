@@ -23,21 +23,15 @@
 
 __version__ = '1.0'
 
-import os
-import sys
-import time
 
-import chipsec_util
-
-from chipsec.logger     import *
-from chipsec.file       import *
+from chipsec.command import BaseCommand
 
 # ###################################################################
 #
 # Crs
 #
 # ###################################################################
-def crx(argv):
+class CRXCommand(BaseCommand):
     """
     >>> chipsec_util cr <cpu_id> <cr_number> [value]
 
@@ -46,36 +40,43 @@ def crx(argv):
     >>> chipsec_util cr 0 0
     >>> chipsec_util cr 0 4 0x0
     """
-    if 4 > len(argv):
-        print crx.__doc__
-        return
 
-    try:
-        cpu_thread_id = int(argv[2],10)
-        cr_number = int(argv[3],16)
-       
-    except:
-        print crx.__doc__
-        return
+    def requires_driver(self):
+        if len(self.argv) < 4:
+            return False
+        return True
 
-    if 5 == len(argv):
-        try:
-            value = int(argv[4], 16)
-        except:
-            print crx.__doc__
+    def run(self):
+
+        if 4 > len(self.argv):
+            print CRXCommand.__doc__
             return
 
-        logger().log( "[CHIPSEC] CPU: %d write CR%d <- 0x%08X" % (cpu_thread_id, cr_number, value) )
         try:
-            chipsec_util._cs.cr.write_cr( cpu_thread_id, cr_number, value )
+            cpu_thread_id = int(self.argv[2],10)
+            cr_number = int(self.argv[3],16)
+           
         except:
-            logger().error( "Write CR failed.")
-    else:
-        try:
-            value = chipsec_util._cs.cr.read_cr( cpu_thread_id, cr_number )
-            logger().log( "[CHIPSEC] CPU: %d read CR%d -> 0x%08X" % (cpu_thread_id, cr_number, value) )
-        except:
-            logger().error( "Read CR failed.")
+            print CRXCommand.__doc__
+            return
 
-chipsec_util.commands['cr'] = {'func' : crx, 'start_driver' : True, 'help' : crx.__doc__  }
+        if 5 == len(self.argv):
+            try:
+                value = int(self.argv[4], 16)
+            except:
+                print CRXCommand.__doc__
+                return
 
+            self.logger.log( "[CHIPSEC] CPU: %d write CR%d <- 0x%08X" % (cpu_thread_id, cr_number, value) )
+            try:
+                self.cs.cr.write_cr( cpu_thread_id, cr_number, value )
+            except:
+                self.logger.error( "Write CR failed.")
+        else:
+            try:
+                value = self.cs.cr.read_cr( cpu_thread_id, cr_number )
+                self.logger.log( "[CHIPSEC] CPU: %d read CR%d -> 0x%08X" % (cpu_thread_id, cr_number, value) )
+            except:
+                self.logger.error( "Read CR failed.")
+
+commands = { 'cr': CRXCommand }
