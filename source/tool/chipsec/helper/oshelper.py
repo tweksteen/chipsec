@@ -181,6 +181,8 @@ class OsHelper:
         win8_or_greater = self.is_windows() and ( self.os_release.startswith('8') or ('2008Server' in self.os_release) or ('2012Server' in self.os_release) )
         return win8_or_greater
 
+    def is_driver_loaded(self):
+        return self.helper.driver_loaded
 
     #################################################################################################
     # Actual OS helper functionality accessible to HAL components

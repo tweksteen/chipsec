@@ -81,6 +81,7 @@ class LinuxHelper:
         self.os_version = platform.version()
         self.os_machine = platform.machine()
         self.os_uname   = platform.uname()
+        self.driver_loaded = False
 
         self.init()
 
@@ -129,6 +130,7 @@ class LinuxHelper:
 
         try:
             _DEV_FH = open(DEVICE_NAME, "r+")
+            self.driver_loaded = True
         except IOError as e:
             raise OsHelperError("Unable to open chipsec device. %s"%str(e),e.errno)
         except BaseException as be:
