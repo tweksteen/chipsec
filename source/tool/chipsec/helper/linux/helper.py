@@ -83,8 +83,6 @@ class LinuxHelper:
         self.os_uname   = platform.uname()
         self.driver_loaded = False
 
-        self.init()
-
     def __del__(self):
         try:
             destroy()
