@@ -39,6 +39,7 @@ import time
 
 from chipsec.command    import BaseCommand
 from chipsec.hal.spi    import *
+from chipsec.helper.oshelper import helper
 
 
 # SPI Flash Controller
@@ -55,7 +56,7 @@ class SPICommand(BaseCommand):
     >>> chipsec_util spi disable-wp
     """
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 3 or helper().is_linux():
             return False
         return True
 
