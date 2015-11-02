@@ -29,5 +29,5 @@ class BaseCommand:
     def run(self):
         raise NotImplementedError('sub class should overwrite the run() method')
 
-    def driver_required(self):
-        raise NotImplementedError('sub class should overwrite the driver_required() method')
+    def requires_driver(self):
+        raise NotImplementedError('sub class should overwrite the requires_driver() method')
