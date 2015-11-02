@@ -94,8 +94,8 @@ class LinuxHelper:
 # Driver/service management functions
 ###############################################################################################
 
-    def create( self ):
-        self.init()
+    def create( self, start_svc ):
+        self.init(start_svc)
         if logger().VERBOSE:
             logger().log("[helper] Linux Helper created")
 
@@ -115,26 +115,27 @@ class LinuxHelper:
         self.stop()
         self.delete()
 
-    def init( self ):
+    def init( self, start_svc ):
         x64 = True if sys.maxsize > 2**32 else False
         self._pack = 'Q' if x64 else 'I'
         self.dev_fh = None
 
-        logger().log("\n****** Chipsec Linux Kernel module is licensed under GPL 2.0\n")
+        if start_svc:
+            logger().log("\n****** Chipsec Linux Kernel module is licensed under GPL 2.0\n")
 
-        try:
-            self.dev_fh = open(self.DEVICE_NAME, "r+")
-            self.driver_loaded = True
-        except IOError as e:
-            raise OsHelperError("Unable to open chipsec device. Did you run as root/sudo and load the driver?\n %s"%str(e),e.errno)
-        except BaseException as be:
-            raise OsHelperError("Unable to open chipsec device. Did you run as root/sudo and load the driver?\n %s"%str(be),errno.ENXIO)
+            try:
+                self.dev_fh = open(self.DEVICE_NAME, "r+")
+                self.driver_loaded = True
+            except IOError as e:
+                raise OsHelperError("Unable to open chipsec device. %s"%str(e),e.errno)
+            except BaseException as be:
+                raise OsHelperError("Unable to open chipsec device. %s"%str(be),errno.ENXIO)
 
-        self._ioctl_base = fcntl.ioctl(self.dev_fh, IOCTL_BASE) << 4
-
+            self._ioctl_base = fcntl.ioctl(self.dev_fh, IOCTL_BASE) << 4
 
     def close(self):
-        close(self.dev_fh)
+        if self.dev_fh:
+          close(self.dev_fh)
         self.dev_fh = None
 
     def ioctl(self, nr, args, *mutate_flag):

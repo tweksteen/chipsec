@@ -247,7 +247,7 @@ class Chipset:
     def init( self, platform_code, start_svc ):
 
         _unknown_platform = False
-        if start_svc: self.helper.start()
+        self.helper.start(start_svc)
 
         if platform_code is None:
             vid_did  = self.pci.read_dword( 0, 0, 0, 0 )

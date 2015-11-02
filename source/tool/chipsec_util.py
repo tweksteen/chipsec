@@ -150,7 +150,7 @@ class ChipsecUtil:
             if self.commands.has_key( cmd ):
                 comm = self.commands[cmd](argv, cs = _cs)
                 try:
-                    _cs.init( _Platform, True )
+                    _cs.init( _Platform, comm.requires_driver())
                 except UnknownChipsetError, msg:
                     logger().warn("*******************************************************************")
                     logger().warn("* Unknown platform!")

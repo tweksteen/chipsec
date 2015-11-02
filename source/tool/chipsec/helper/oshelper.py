@@ -157,9 +157,9 @@ class OsHelper:
         except NameError:
             pass
 
-    def start( self ):
+    def start( self, start_svc):
         try:
-            self.helper.create()
+            self.helper.create(start_svc)
             self.helper.start()
         except (None,Exception) , msg:
             if logger().VERBOSE: logger().log_bad(traceback.format_exc())

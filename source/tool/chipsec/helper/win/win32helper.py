@@ -370,7 +370,7 @@ class Win32Helper:
         #if logger().VERBOSE:
         #   logger().log( "[helper] chipsec service handle = 0x%08x" % self.hs )
 
-    def create( self ):
+    def create( self, start_svc ):
 
         logger().log( "" )
         logger().warn( "*******************************************************************" )
