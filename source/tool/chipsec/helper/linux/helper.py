@@ -188,15 +188,34 @@ class LinuxHelper:
         return self.read_pci_reg(bus, device, function, address)
 
     def read_pci_reg( self, bus, device, function, offset, size = 4 ):
-        _PCI_DOM = 0 #Change PCI domain, if there is more than one.
-        d = struct.pack("5"+self._pack, ((_PCI_DOM << 16) | bus), ((device << 16) | function), offset, size, 0)
-        try:
-            ret = self.ioctl(IOCTL_RDPCI, d)
-        except IOError:
-            print "IOError\n"
-            return None
-        x = struct.unpack("5"+self._pack, ret)
-        return x[4]
+        if not self.driver_loaded:
+            return self.read_pci_reg_from_sys(bus, device, function, offset, size)
+        else:
+            _PCI_DOM = 0 #Change PCI domain, if there is more than one.
+            d = struct.pack("5"+self._pack, ((_PCI_DOM << 16) | bus), ((device << 16) | function), offset, size, 0)
+            try:
+                ret = self.ioctl(IOCTL_RDPCI, d)
+            except IOError:
+                print "IOError\n"
+                return None
+            x = struct.unpack("5"+self._pack, ret)
+            return x[4]
+
+    def read_pci_reg_from_sys(self, bus, device, function, offset, size):
+        _PCI_DOM = 0
+        device_name = "{domain:04x}:{bus:02x}:{device:02x}.{function}".format(
+                      domain=_PCI_DOM, bus=bus, device=device, function=function)
+        config = open("/sys/bus/pci/devices/{}/config".format(device_name), "rb")
+        config.seek(offset)
+        x = config.read(size)
+        config.close()
+        if size == 4:
+          x = struct.unpack("=I", x)[0]
+        elif size == 2:
+          x = struct.unpack("=H", x)[0]
+        elif size == 1:
+          x = struct.unpack("=B", x)[0]
+        return x
 
     def write_pci_reg( self, bus, device, function, offset, value, size = 4 ):
         _PCI_DOM = 0 #Change PCI domain, if there is more than one.
