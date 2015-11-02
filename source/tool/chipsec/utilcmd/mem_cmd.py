@@ -28,20 +28,16 @@ The mem command provides direct access to read and write physical memory.
 __version__ = '1.0'
 
 import os
-import sys
 import time
 
 import chipsec_util
 
-import chipsec.file
-import chipsec.logger
-
-from chipsec.logger     import *
-from chipsec.file       import *
-
+from chipsec.logger     import print_buffer
+from chipsec.file       import read_file, write_file
+from chipsec.command    import BaseCommand
 
 # Physical Memory
-def mem(argv):
+class MemCommand(BaseCommand):
     """
     >>> chipsec_util mem <op> <physical_address> <length> [value|buffer_file]
     >>>
@@ -62,98 +58,104 @@ def mem(argv):
     >>> chipsec_util mem allocate                    0x1000
     """
 
-    phys_address    = 0
-    size = 0x100
+    def requires_driver(self):
+        if len(self.argv) < 3:
+            return False
+        return True
 
-    if 3 > len(argv):
-        print mem.__doc__
-        return
+    def run(self):
+        phys_address    = 0
+        size = 0x100
 
-    op = argv[2]
-    t = time.time()
-
-    if 'allocate'   == op and 4 == len(argv):
-        size = int(argv[3],16)
-        (va, pa) = chipsec_util._cs.mem.alloc_physical_mem( size )
-        logger().log( '[CHIPSEC] Allocated %X bytes of physical memory: VA = 0x%016X, PA = 0x%016X' % (size, va, pa) )
-
-    elif 'read'     == op:
-        phys_address = int(argv[3],16)
-        size         = int(argv[4],16) if len(argv) > 4 else 0x100
-        logger().log( '[CHIPSEC] reading buffer from memory: PA = 0x%016X, len = 0x%X..' % (phys_address, size) )
-        buffer = chipsec_util._cs.mem.read_physical_mem( phys_address, size )
-        if len(argv) > 5:
-            buf_file = argv[5]
-            chipsec.file.write_file( buf_file, buffer )
-            logger().log( "[CHIPSEC] written 0x%X bytes to '%s'" % (len(buffer), buf_file) )
-        else:
-            print_buffer( buffer )
-
-    elif 'readval'  == op:
-        phys_address = int(argv[3],16)
-        width        = 0x4
-        if len(argv) > 4: 
-            width = chipsec_util.get_option_width(argv[4]) if chipsec_util.is_option_valid_width(argv[4]) else int(argv[4],16)
-        logger().log( '[CHIPSEC] reading value from memory: PA = 0x%016X, width = 0x%X..' % (phys_address, size) )
-        if   0x1 == width: value = chipsec_util._cs.mem.read_physical_mem_byte ( phys_address )
-        elif 0x2 == width: value = chipsec_util._cs.mem.read_physical_mem_word ( phys_address )
-        elif 0x4 == width: value = chipsec_util._cs.mem.read_physical_mem_dword( phys_address )
-        logger().log( '[CHIPSEC] value = 0x%X' % value )
-
-    elif 'write'    == op:
-        phys_address = int(argv[3],16)
-        if len(argv) > 4: 
-            size = int(argv[4],16)
-        else:
-            logger().error( "must specify <length> argument in 'mem write'" )
+        if 3 > len(self.argv):
+            print MemCommand.__doc__
             return
-        if len(argv) > 5:
-            buf_file = argv[5]
-            if not os.path.exists( buf_file ):
-                #buffer = buf_file.decode('hex')
-                try:
-                  buffer = bytearray.fromhex(buf_file)
-                except ValueError, e:
-                    logger().error( "incorrect <value> specified: '%s'" % buf_file )
-                    logger().error( str(e) )
-                    return
-                logger().log( "[CHIPSEC] read 0x%X hex bytes from command-line: %s'" % (len(buffer), buf_file) )
-            else:
-                buffer = chipsec.file.read_file( buf_file )
-                logger().log( "[CHIPSEC] read 0x%X bytes from file '%s'" % (len(buffer), buf_file) )
 
-            if len(buffer) < size:
-                logger().error( "number of bytes read (0x%X) is less than the specified <length> (0x%X)" % (len(buffer),size) )
+        op = self.argv[2]
+        t = time.time()
+
+        if 'allocate'   == op and 4 == len(self.argv):
+            size = int(self.argv[3],16)
+            (va, pa) = self.cs.mem.alloc_physical_mem( size )
+            self.logger.log( '[CHIPSEC] Allocated %X bytes of physical memory: VA = 0x%016X, PA = 0x%016X' % (size, va, pa) )
+
+        elif 'read'     == op:
+            phys_address = int(self.argv[3],16)
+            size         = int(self.argv[4],16) if len(self.argv) > 4 else 0x100
+            self.logger.log( '[CHIPSEC] reading buffer from memory: PA = 0x%016X, len = 0x%X..' % (phys_address, size) )
+            buffer = self.cs.mem.read_physical_mem( phys_address, size )
+            if len(self.argv) > 5:
+                buf_file = self.argv[5]
+                chipsec.file.write_file( buf_file, buffer )
+                self.logger.log( "[CHIPSEC] written 0x%X bytes to '%s'" % (len(buffer), buf_file) )
+            else:
+                print_buffer( buffer )
+
+        elif 'readval'  == op:
+            phys_address = int(self.argv[3],16)
+            width        = 0x4
+            if len(self.argv) > 4: 
+                width = chipsec_util.get_option_width(self.argv[4]) if chipsec_util.is_option_valid_width(self.argv[4]) else int(self.argv[4],16)
+            self.logger.log( '[CHIPSEC] reading value from memory: PA = 0x%016X, width = 0x%X..' % (phys_address, size) )
+            if   0x1 == width: value = self.cs.mem.read_physical_mem_byte ( phys_address )
+            elif 0x2 == width: value = self.cs.mem.read_physical_mem_word ( phys_address )
+            elif 0x4 == width: value = self.cs.mem.read_physical_mem_dword( phys_address )
+            self.logger.log( '[CHIPSEC] value = 0x%X' % value )
+
+        elif 'write'    == op:
+            phys_address = int(self.argv[3],16)
+            if len(self.argv) > 4: 
+                size = int(self.argv[4],16)
+            else:
+                self.logger.error( "must specify <length> argument in 'mem write'" )
+                return
+            if len(self.argv) > 5:
+                buf_file = self.argv[5]
+                if not os.path.exists( buf_file ):
+                    #buffer = buf_file.decode('hex')
+                    try:
+                      buffer = bytearray.fromhex(buf_file)
+                    except ValueError, e:
+                        self.logger.error( "incorrect <value> specified: '%s'" % buf_file )
+                        self.logger.error( str(e) )
+                        return
+                    self.logger.log( "[CHIPSEC] read 0x%X hex bytes from command-line: %s'" % (len(buffer), buf_file) )
+                else:
+                    buffer = chipsec.file.read_file( buf_file )
+                    self.logger.log( "[CHIPSEC] read 0x%X bytes from file '%s'" % (len(buffer), buf_file) )
+
+                if len(buffer) < size:
+                    self.logger.error( "number of bytes read (0x%X) is less than the specified <length> (0x%X)" % (len(buffer),size) )
+                    return
+
+                self.logger.log( '[CHIPSEC] writing buffer to memory: PA = 0x%016X, len = 0x%X..' % (phys_address, size) )
+                self.cs.mem.write_physical_mem( phys_address, size, buffer )
+            else:
+                self.logger.error( "must specify <buffer>|<file> argument in 'mem write'" )
                 return
 
-            logger().log( '[CHIPSEC] writing buffer to memory: PA = 0x%016X, len = 0x%X..' % (phys_address, size) )
-            chipsec_util._cs.mem.write_physical_mem( phys_address, size, buffer )
+        elif 'writeval' == op:
+            phys_address = int(self.argv[3],16)
+            if len(self.argv) > 4: 
+                width = chipsec_util.get_option_width(self.argv[4]) if chipsec_util.is_option_valid_width(self.argv[4]) else int(self.argv[4],16)
+            else:
+                self.logger.error( "must specify <length> argument in 'mem writeval' as one of %s" % chipsec_util.CMD_OPTS_WIDTH )
+                return
+            if len(self.argv) > 5: 
+                value = int(self.argv[5],16)
+            else:
+                self.logger.error( "must specify <value> argument in 'mem writeval'" )
+                return
+
+            self.logger.log( '[CHIPSEC] writing value to memory: PA = 0x%016X, width = 0x%X, value = 0x%X..' % (phys_address, width, value) )
+            if   0x1 == width: self.cs.mem.write_physical_mem_byte ( phys_address, value )
+            elif 0x2 == width: self.cs.mem.write_physical_mem_word ( phys_address, value )
+            elif 0x4 == width: self.cs.mem.write_physical_mem_dword( phys_address, value )
+
         else:
-            logger().error( "must specify <buffer>|<file> argument in 'mem write'" )
-            return
+                print MemCommand.__doc__
+                return
 
-    elif 'writeval' == op:
-        phys_address = int(argv[3],16)
-        if len(argv) > 4: 
-            width = chipsec_util.get_option_width(argv[4]) if chipsec_util.is_option_valid_width(argv[4]) else int(argv[4],16)
-        else:
-            logger().error( "must specify <length> argument in 'mem writeval' as one of %s" % chipsec_util.CMD_OPTS_WIDTH )
-            return
-        if len(argv) > 5: 
-            value = int(argv[5],16)
-        else:
-            logger().error( "must specify <value> argument in 'mem writeval'" )
-            return
+        self.logger.log( "[CHIPSEC] (mem) time elapsed %.3f" % (time.time()-t) )
 
-        logger().log( '[CHIPSEC] writing value to memory: PA = 0x%016X, width = 0x%X, value = 0x%X..' % (phys_address, width, value) )
-        if   0x1 == width: chipsec_util._cs.mem.write_physical_mem_byte ( phys_address, value )
-        elif 0x2 == width: chipsec_util._cs.mem.write_physical_mem_word ( phys_address, value )
-        elif 0x4 == width: chipsec_util._cs.mem.write_physical_mem_dword( phys_address, value )
-
-    else:
-            print mem.__doc__
-            return
-
-    logger().log( "[CHIPSEC] (mem) time elapsed %.3f" % (time.time()-t) )
-
-chipsec_util.commands['mem'] = {'func' : mem, 'start_driver' : True, 'help' : mem.__doc__  }
+commands = { 'mem': MemCommand }
