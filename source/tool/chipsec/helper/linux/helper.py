@@ -132,6 +132,8 @@ class LinuxHelper:
                 raise OsHelperError("Unable to open chipsec device. %s"%str(be),errno.ENXIO)
 
             self._ioctl_base = fcntl.ioctl(self.dev_fh, IOCTL_BASE) << 4
+        else:
+            self.dev_mem = os.open("/dev/mem", os.O_RDWR)
 
     def close(self):
         if self.dev_fh:
@@ -320,23 +322,39 @@ class LinuxHelper:
         return struct.unpack( "2"+self._pack, out_buf )
 
     def read_mmio_reg(self, phys_address, size):
-        in_buf = struct.pack( "2"+self._pack, phys_address, size)
-        out_buf = self.ioctl(IOCTL_RDMMIO, in_buf)
+        if not self.driver_loaded:
+            os.lseek(self.dev_mem, phys_address, os.SEEK_SET)
+            x = os.read(self.dev_mem, size)
+        else:
+            in_buf = struct.pack( "2"+self._pack, phys_address, size)
+            out_buf = self.ioctl(IOCTL_RDMMIO, in_buf)
+            x = out_buf[:size]
         if size == 8:
-            value = struct.unpack( '=Q', out_buf[:size] )[0]
+            value = struct.unpack( '=Q', x)[0]
         elif size == 4:
-            value = struct.unpack( '=I', out_buf[:size] )[0]
+            value = struct.unpack( '=I', x)[0]
         elif size == 2:
-            value = struct.unpack( '=H', out_buf[:size] )[0]
+            value = struct.unpack( '=H', x)[0]
         elif size == 1:
-            value = struct.unpack( '=B', out_buf[:size] )[0]
+            value = struct.unpack( '=B', x)[0]
         else: value = 0
         return value
 
     def write_mmio_reg(self, phys_address, size, value):
-        in_buf = struct.pack( "3"+self._pack, phys_address, size, value )
-        out_buf = self.ioctl(IOCTL_WRMMIO, in_buf)
-        return
+        if not self.driver_loaded:
+            os.lseek(self.dev_mem, phys_address, os.SEEK_SET)
+            if size == 4:
+                x = struct.pack("=I", value)
+            elif size == 2:
+                x = struct.pack("=H", value)
+            elif size == 1:
+                x = struct.pack("=B", value)
+            written = os.write(self.dev_mem, x)
+            if written != size:
+                logger().error("Unable to write full content to MMIO")
+        else:
+            in_buf = struct.pack( "3"+self._pack, phys_address, size, value )
+            out_buf = self.ioctl(IOCTL_WRMMIO, in_buf)
         
     def kern_get_EFI_variable_full(self, name, guid):
         status_dict = { 0:"EFI_SUCCESS", 1:"EFI_LOAD_ERROR", 2:"EFI_INVALID_PARAMETER", 3:"EFI_UNSUPPORTED", 4:"EFI_BAD_BUFFER_SIZE", 5:"EFI_BUFFER_TOO_SMALL", 6:"EFI_NOT_READY", 7:"EFI_DEVICE_ERROR", 8:"EFI_WRITE_PROTECTED", 9:"EFI_OUT_OF_RESOURCES", 14:"EFI_NOT_FOUND", 26:"EFI_SECURITY_VIOLATION" }
