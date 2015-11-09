@@ -82,8 +82,7 @@ class LinuxHelper:
         self.os_version = platform.version()
         self.os_machine = platform.machine()
         self.os_uname   = platform.uname()
-
-        self.init()
+        self.driver_loaded = False
 
     def __del__(self):
         try:
@@ -125,6 +124,7 @@ class LinuxHelper:
 
         try:
             self.dev_fh = open(self.DEVICE_NAME, "r+")
+            self.driver_loaded = True
         except IOError as e:
             raise OsHelperError("Unable to open chipsec device. Did you run as root/sudo and load the driver?\n %s"%str(e),e.errno)
         except BaseException as be:

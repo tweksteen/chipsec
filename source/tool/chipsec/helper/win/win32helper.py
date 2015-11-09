@@ -248,6 +248,7 @@ class Win32Helper:
         self.driver_path    = None
         self.win_ver        = win_ver
         self.driver_handle  = None
+        self.driver_loaded  = False
         #self.device_file    =  u"%s" % DEVICE_FILE
         self.device_file    = pywintypes.Unicode(DEVICE_FILE)
 
@@ -349,6 +350,7 @@ class Win32Helper:
             try:
                 win32service.StartService( self.hs, None );
                 state = win32service.QueryServiceStatus( self.hs )[1]
+                self.driver_loaded = True
                 while win32service.SERVICE_START_PENDING == state:
                     time.sleep( 1 )
                     state = win32service.QueryServiceStatus( self.hs )[1]
