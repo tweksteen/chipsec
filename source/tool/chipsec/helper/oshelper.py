@@ -75,6 +75,8 @@ class Helper(object):
             else:
                 cls.registry.append((name, cls))
 
+import chipsec.helper.helpers
+
 ## OS Helper
 #
 # Abstracts support for various OS/environments, wrapper around platform specific code that invokes kernel driver
@@ -98,7 +100,6 @@ class OsHelper:
 
     def loadHelpers(self):
         if logger().VERBOSE: logger().log("======== Load Helper for %s ==========="%platform.system().lower())
-        import chipsec.helper.helpers
         for name, cls in Helper.registry:
           try:
             self.helper = cls()
