@@ -345,5 +345,5 @@ def helper():
         except BaseException, msg:
             logger().error( str(msg) )
             if logger().VERBOSE: logger().log_bad(traceback.format_exc())
-            sys.exit()
+            raise
     return _helper
