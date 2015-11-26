@@ -239,6 +239,10 @@ def write_MMIOBAR_reg(cs, bar_id, offset, dword_value ):
 #
 # Read MMIO register as an offset off of MMIO range base address
 #
+def read_raw_MMIO_reg(cs, bar_base, offset, size=4 ):
+    reg_value = cs.helper.read_raw_mmio_reg( bar_base + offset, size )
+    if logger().VERBOSE: logger().log( '[mmio] 0x%08X + 0x%08X = 0x%s' % (bar_base, offset, reg_value.encode("hex")) )
+    return reg_value
 def read_MMIO_reg(cs, bar_base, offset, size=4 ):
     reg_value = cs.helper.read_mmio_reg( bar_base + offset, size )
     if logger().VERBOSE: logger().log( '[mmio] 0x%08X + 0x%08X = 0x%08X' % (bar_base, offset, reg_value) )

@@ -149,6 +149,9 @@ class OsHelper:
     #################################################################################################
     # Actual OS helper functionality accessible to HAL components
 
+    def map_to_memory(self, base, size):
+        return self.helper.map_to_memory(base, size)
+
     #
     # Read/Write PCI configuration registers via legacy CF8/CFC ports
     #
@@ -179,6 +182,9 @@ class OsHelper:
     #
     # read/write mmio
     #
+    def read_raw_mmio_reg( self, phys_address, size ):
+        return self.helper.read_raw_mmio_reg( phys_address, size )
+
     def read_mmio_reg( self, phys_address, size ):
         return self.helper.read_mmio_reg( phys_address, size )
         

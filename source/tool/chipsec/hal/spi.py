@@ -170,6 +170,7 @@ class SPI:
     def __init__( self, cs ):
         self.cs = cs
         self.rcba_spi_base = get_SPI_MMIO_base( self.cs )
+        self.cs.helper.map_to_memory(self.rcba_spi_base, 0x100)
 
         # Reading definitions of SPI flash controller registers
         # which are required to send SPI cycles once for performance reasons
@@ -183,6 +184,9 @@ class SPI:
             logger().log( "      HSFS   offset = 0x%04X" % self.hsfs_off )
             logger().log( "      FADDR  offset = 0x%04X" % self.faddr_off )
             logger().log( "      FDATA0 offset = 0x%04X" % self.fdata0_off )
+
+    def spi_reg_read_raw( self, reg, size=4 ):
+        return read_raw_MMIO_reg( self.cs, self.rcba_spi_base, reg, size )
 
     def spi_reg_read( self, reg, size=4 ):
         return read_MMIO_reg( self.cs, self.rcba_spi_base, reg, size )
@@ -534,7 +538,7 @@ class SPI:
         if buf is None:
             return None
         if filename is not None:
-            write_file( filename, struct.pack('c'*len(buf), *buf) )
+            write_file( filename, "".join(buf) )
         else:
             chipsec.logger.print_buffer( buf, 16 )
         return buf
@@ -561,17 +565,15 @@ class SPI:
             return None
 
         for i in range(n):
-            if logger().UTIL_TRACE or logger().VERBOSE:
+            if logger().VERBOSE:
                 logger().log( "[spi] reading chunk %d of 0x%x bytes from 0x%X" % (i, dbc, spi_fla + i*dbc) )
             if not self._send_spi_cycle( HSFCTL_READ_CYCLE, dbc-1, spi_fla + i*dbc ):
                 logger().error( "SPI flash read failed" )
             else:
-                for fdata_idx in range(0,dbc/4):
-                    dword_value = self.spi_reg_read( self.fdata0_off + fdata_idx*4 )
-                    if logger().VERBOSE:
-                        logger().log( "[spi] FDATA00 + 0x%x: 0x%X" % (fdata_idx*4, dword_value) )
-                    buf += [ chr((dword_value>>(8*j))&0xff) for j in range(4) ]
-                    #buf += tuple( struct.pack("I", dword_value) )
+                tbuf = "".join([ self.spi_reg_read_raw( self.fdata0_off + j*4) for j in range(dbc/4) ])
+                if logger().VERBOSE:
+                    logger().log( "[spi] FDATA: 0x%s" % (tbuf.encode("hex")) )
+                buf += tbuf
         if (0 != r):
             if logger().UTIL_TRACE or logger().VERBOSE:
                 logger().log( "[spi] reading remaining 0x%x bytes from 0x%X" % (r, spi_fla + n*dbc) )

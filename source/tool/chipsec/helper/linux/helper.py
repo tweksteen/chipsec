@@ -47,6 +47,8 @@ from chipsec.logger import logger, print_buffer
 import errno
 import array
 import chipsec.file
+import mmap
+import resource
 
 from ctypes import *
 
@@ -71,6 +73,14 @@ IOCTL_RDMMIO                   = 0x12
 IOCTL_WRMMIO                   = 0x13
 IOCTL_VA2PA                    = 0x14
 
+class MemoryMapping(mmap.mmap):
+
+    def __init__(self, fileno, length, flags, prot, offset):
+        super(MemoryMapping, self).__init__(self, fileno, length, flags, prot,
+                                            offset=offset)
+        self.start = offset
+        self.end   = offset + length
+
 class LinuxHelper(Helper):
 
     DEVICE_NAME = "/dev/chipsec"
@@ -83,6 +93,7 @@ class LinuxHelper(Helper):
         self.os_machine = platform.machine()
         self.os_uname   = platform.uname()
         self.driver_loaded = False
+        self.mappings   = []
 
     def __del__(self):
         try:
@@ -146,6 +157,26 @@ class LinuxHelper(Helper):
 ###############################################################################################
 # Actual API functions to access HW resources
 ###############################################################################################
+    # Naive memory segment manager. Does not support overlapping.
+    def memory_mapping(self, base, size):
+        for m in self.mappings:
+            if m.start <= base and m.end >= base + size:
+                return m
+        return None
+
+    def map_to_memory(self, base, size):
+        # Only works with the /dev/mem method
+        if self.driver_loaded:
+            return
+        if not self.memory_mapping(base, size):
+            length = max(size, resource.getpagesize())
+            page_mask = 0xffffffff - (resource.getpagesize() - 1)
+            page_aligned_base = base & page_mask
+            mapping = MemoryMapping(self.dev_mem, length, mmap.MAP_SHARED,
+                                mmap.PROT_READ | mmap.PROT_WRITE,
+                                offset=page_aligned_base)
+            self.mappings.append(mapping)
+
     def __mem_block(self, sz, newval = None):
         if(newval == None):
             return self.dev_fh.read(sz)
@@ -153,6 +184,7 @@ class LinuxHelper(Helper):
             self.dev_fh.write(newval)
             self.dev_fh.flush()
         return 1
+
 
     def mem_read_block(self, addr, sz):
         if(addr != None): self.dev_fh.seek(addr)
@@ -321,14 +353,23 @@ class LinuxHelper(Helper):
         out_buf = self.ioctl(IOCTL_ALLOC_PHYSMEM, in_buf)
         return struct.unpack( "2"+self._pack, out_buf )
 
-    def read_mmio_reg(self, phys_address, size):
+    def read_raw_mmio_reg(self, phys_address, size):
         if not self.driver_loaded:
-            os.lseek(self.dev_mem, phys_address, os.SEEK_SET)
-            x = os.read(self.dev_mem, size)
+            m = self.memory_mapping(phys_address, size)
+            if not m:
+                os.lseek(self.dev_mem, phys_address, os.SEEK_SET)
+                x = os.read(self.dev_mem, size)
+            else:
+                m.seek(phys_address - m.start)
+                x = m.read(size)
         else:
             in_buf = struct.pack( "2"+self._pack, phys_address, size)
             out_buf = self.ioctl(IOCTL_RDMMIO, in_buf)
             x = out_buf[:size]
+        return x
+
+    def read_mmio_reg(self, phys_address, size):
+        x = self.read_raw_mmio_reg(phys_address, size)
         if size == 8:
             value = struct.unpack( '=Q', x)[0]
         elif size == 4:
@@ -337,25 +378,31 @@ class LinuxHelper(Helper):
             value = struct.unpack( '=H', x)[0]
         elif size == 1:
             value = struct.unpack( '=B', x)[0]
-        else: value = 0
+        else:
+            value = 0
         return value
 
     def write_mmio_reg(self, phys_address, size, value):
         if not self.driver_loaded:
-            os.lseek(self.dev_mem, phys_address, os.SEEK_SET)
             if size == 4:
                 x = struct.pack("=I", value)
             elif size == 2:
                 x = struct.pack("=H", value)
             elif size == 1:
                 x = struct.pack("=B", value)
-            written = os.write(self.dev_mem, x)
-            if written != size:
-                logger().error("Unable to write full content to MMIO")
+            m = self.memory_mapping(phys_address, size)
+            if not m:
+              os.lseek(self.dev_mem, phys_address, os.SEEK_SET)
+              written = os.write(self.dev_mem, x)
+              if written != size:
+                  logger().error("Unable to write full content to MMIO")
+            else:
+              m.seek(phys_address - m.start)
+              m.write(x)
         else:
             in_buf = struct.pack( "3"+self._pack, phys_address, size, value )
             out_buf = self.ioctl(IOCTL_WRMMIO, in_buf)
-        
+
     def kern_get_EFI_variable_full(self, name, guid):
         status_dict = { 0:"EFI_SUCCESS", 1:"EFI_LOAD_ERROR", 2:"EFI_INVALID_PARAMETER", 3:"EFI_UNSUPPORTED", 4:"EFI_BAD_BUFFER_SIZE", 5:"EFI_BUFFER_TOO_SMALL", 6:"EFI_NOT_READY", 7:"EFI_DEVICE_ERROR", 8:"EFI_WRITE_PROTECTED", 9:"EFI_OUT_OF_RESOURCES", 14:"EFI_NOT_FOUND", 26:"EFI_SECURITY_VIOLATION" }
         off = 0

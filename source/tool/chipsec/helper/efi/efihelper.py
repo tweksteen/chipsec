@@ -103,15 +103,21 @@ class EfiHelper(Helper):
 # Actual API functions to access HW resources
 ###############################################################################################
 
+    def map_to_memory(self, base, size):
+        pass
+
     def read_phys_mem( self, phys_address_hi, phys_address_lo, length ):
         if logger().VERBOSE:
             logger().log( '[efi] helper does not support 64b PA' )
         return self._read_phys_mem( phys_address_lo, length )
     
-    def read_mmio_reg(self, phys_address, size):
+    def read_raw_mmio_reg(self, phys_address, size):
         if logger().VERBOSE:
             logger().log( '[efi] helper does not support 64b PA' )
-        out_buf = self._read_phys_mem( phys_address, size )
+        return self._read_phys_mem( phys_address, size )
+
+    def read_mmio_reg(self, phys_address, size):
+        out_buf = self.read_raw_mmio_reg(phys_address, size)
         if size == 4:
             value = struct.unpack( '=I', out_buf[:size] )[0]
         elif size == 2:

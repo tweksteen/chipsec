@@ -542,6 +542,9 @@ class Win32Helper(Helper):
 # Actual driver IOCTL functions to access HW resources
 ###############################################################################################
 
+    def map_to_memory(self, base, size):
+        pass
+
     def read_phys_mem( self, phys_address_hi, phys_address_lo, length ):
         out_length = length
         out_buf = (c_char * out_length)()
@@ -557,11 +560,15 @@ class Win32Helper(Helper):
         return out_buf
     
     # @TODO: Temporarily the same as read_phys_mem for compatibility 
-    def read_mmio_reg( self, phys_address, size ):
+    def read_raw_mmio_reg( self, phys_address, size):
         out_size = size
         out_buf = (c_char * out_size)()
         in_buf = struct.pack( '3I', (phys_address>>32)&0xFFFFFFFF, phys_address&0xFFFFFFFF, size )
         out_buf = self._ioctl( IOCTL_READ_PHYSMEM, in_buf, out_size )
+        return out_buf
+
+    def read_mmio_reg( self, phys_address, size ):
+        out_buf = self.read_raw_mmio_reg(phys_address, size)
         if size == 8:
             value = struct.unpack( '=Q', out_buf )[0]
         elif size == 4:
@@ -572,6 +579,7 @@ class Win32Helper(Helper):
             value = struct.unpack( '=B', out_buf )[0]
         else: value = 0
         return value
+
     def write_mmio_reg( self, phys_address, size, value ):
         if   size == 8: buf = struct.pack( '=Q', value )
         elif size == 4: buf = struct.pack( '=I', value&0xFFFFFFFF )
