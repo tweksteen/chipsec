@@ -44,11 +44,11 @@ class IDTCommand(BaseCommand):
         return True
 
     def run(self):
-        if (2 == len(self.argv)):
+        if (0 == len(self.argv)):
             self.logger.log( "[CHIPSEC] Dumping IDT of %d CPU threads" % self.cs.msr.get_cpu_thread_count() )
             self.cs.msr.IDT_all( 4 )
-        elif (3 == len(self.argv)):
-            tid = int(self.argv[2],16)
+        elif (1 == len(self.argv)):
+            tid = int(self.argv[0],16)
             self.cs.msr.IDT( tid, 4 )
 
 class GDTCommand(BaseCommand):
@@ -65,11 +65,11 @@ class GDTCommand(BaseCommand):
         return True
 
     def run(self):
-        if (2 == len(self.argv)):
+        if (0 == len(self.argv)):
             self.logger.log( "[CHIPSEC] Dumping GDT of %d CPU threads" % self.cs.msr.get_cpu_thread_count() )
             self.cs.msr.GDT_all( 4 )
-        elif (3 == len(self.argv)):
-            tid = int(self.argv[2],16)
+        elif (1 == len(self.argv)):
+            tid = int(self.argv[0],16)
             self.cs.msr.GDT( tid, 4 )
 
 class LDTCommand(BaseCommand):

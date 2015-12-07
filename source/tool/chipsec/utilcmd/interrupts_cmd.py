@@ -41,7 +41,7 @@ class SMICommand(BaseCommand):
     >>> chipsec_util smi 0x0 0xDE 0x0 0xAAAAAAAAAAAAAAAA ..
     """
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
@@ -54,22 +54,22 @@ class SMICommand(BaseCommand):
 
         SMI_code_port_value = 0xF
         SMI_data_port_value = 0x0
-        if (2 == len(self.argv)):
+        if (0 == len(self.argv)):
             print SMICommand.__doc__
-        elif (4 < len(self.argv)):
-            thread_id = int(self.argv[2],16)
-            SMI_code_port_value = int(self.argv[3],16)
-            SMI_data_port_value = int(self.argv[4],16)
+        elif (2 < len(self.argv)):
+            thread_id = int(self.argv[0],16)
+            SMI_code_port_value = int(self.argv[1],16)
+            SMI_data_port_value = int(self.argv[2],16)
             self.logger.log( "[CHIPSEC] Sending SW SMI (code: 0x%02X, data: 0x%02X).." % (SMI_code_port_value, SMI_data_port_value) )
-            if (5 == len(self.argv)):
+            if (3 == len(self.argv)):
                 interrupts.send_SMI_APMC( SMI_code_port_value, SMI_data_port_value )
-            elif (11 == len(self.argv)):
-                _rax = int(self.argv[5],16)
-                _rbx = int(self.argv[6],16)
-                _rcx = int(self.argv[7],16)
-                _rdx = int(self.argv[8],16)
-                _rsi = int(self.argv[9],16)
-                _rdi = int(self.argv[10],16)
+            elif (9 == len(self.argv)):
+                _rax = int(self.argv[3],16)
+                _rbx = int(self.argv[4],16)
+                _rcx = int(self.argv[5],16)
+                _rdx = int(self.argv[6],16)
+                _rsi = int(self.argv[7],16)
+                _rdi = int(self.argv[8],16)
                 self.logger.log( "          RAX: 0x%016X (AX will be overwridden with values of SW SMI ports B2/B3)" % _rax )
                 self.logger.log( "          RBX: 0x%016X" % _rbx )
                 self.logger.log( "          RCX: 0x%016X" % _rcx )
@@ -90,12 +90,12 @@ class NMICommand(BaseCommand):
     >>> chipsec_util nmi
     """
     def requires_driver(self):
-        if len(self.argv) < 2:
+        if len(self.argv) > 0:
             return False
         return True
 
     def run(self):
-        if 2 < len(self.argv):
+        if 0 != len(self.argv):
             print NMICommand.__doc__
 
         try:

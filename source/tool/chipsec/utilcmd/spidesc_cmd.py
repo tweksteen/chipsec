@@ -41,11 +41,11 @@ class SPIDescCommand(BaseCommand):
         return False
 
     def run(self):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print SPIDescCommand.__doc__
             return
 
-        fd_file = self.argv[2]
+        fd_file = self.argv[0]
         self.logger.log( "[CHIPSEC] Parsing SPI Flash Descriptor from file '%s'\n" % fd_file )
 
         t = time.time()

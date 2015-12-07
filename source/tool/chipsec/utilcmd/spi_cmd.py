@@ -56,12 +56,12 @@ class SPICommand(BaseCommand):
     >>> chipsec_util spi disable-wp
     """
     def requires_driver(self):
-        if len(self.argv) < 3 or helper().is_linux():
+        if len(self.argv) < 1 or helper().is_linux():
             return False
         return True
 
     def run(self):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print SPICommand.__doc__
             return
 
@@ -71,12 +71,12 @@ class SPICommand(BaseCommand):
             print msg
             return
 
-        spi_op = self.argv[2]
+        spi_op = self.argv[0]
 
         t = time.time()
 
         if ( 'erase' == spi_op ):
-            spi_fla = int(self.argv[3],16)
+            spi_fla = int(self.argv[1],16)
             self.logger.log( "[CHIPSEC] Erasing SPI Flash block at FLA = 0x%X" % spi_fla )
             #if not _spi.disable_BIOS_write_protection():
             #    self.logger.error( "Could not disable SPI Flash protection. Still trying.." )
@@ -84,9 +84,9 @@ class SPICommand(BaseCommand):
             ok = _spi.erase_spi_block( spi_fla )
             if ok: self.logger.log_result( "SPI Flash erase done" )
             else:  self.logger.warn( "SPI Flash erase returned error (turn on VERBOSE)" )
-        elif ( 'write' == spi_op and 5 == len(self.argv) ):
-            spi_fla = int(self.argv[3],16)
-            filename = self.argv[4]
+        elif ( 'write' == spi_op and 3 == len(self.argv) ):
+            spi_fla = int(self.argv[1],16)
+            filename = self.argv[2]
             self.logger.log( "[CHIPSEC] Writing to SPI Flash at FLA = 0x%X from '%.64s'" % (spi_fla, filename) )
             #if not _spi.disable_BIOS_write_protection():
             #    self.logger.error( "Could not disable SPI Flash protection. Still trying.." )
@@ -95,12 +95,12 @@ class SPICommand(BaseCommand):
             if ok: self.logger.log_result( "SPI Flash write done" )
             else:  self.logger.warn( "SPI Flash write returned error (turn on VERBOSE)" )
         elif ( 'read' == spi_op ):
-            spi_fla = int(self.argv[3],16)
-            length = int(self.argv[4],16)
+            spi_fla = int(self.argv[1],16)
+            length = int(self.argv[2],16)
             self.logger.log( "[CHIPSEC] Reading 0x%x bytes from SPI Flash starting at FLA = 0x%X" % (length, spi_fla) )
             out_file = None
-            if 6 == len(self.argv):
-                out_file = self.argv[5]
+            if 4 == len(self.argv):
+                out_file = self.argv[3]
             buf = _spi.read_spi_to_file( spi_fla, length, out_file )
             if (buf is None): self.logger.error( "SPI Flash read didn't return any data (turn on VERBOSE)" )
             else: self.logger.log_result( "SPI Flash read done" )
@@ -109,8 +109,8 @@ class SPICommand(BaseCommand):
             ok = _spi.display_SPI_map()
         elif ( 'dump' == spi_op ):
             out_file = 'rom.bin'
-            if 4 == len(self.argv):
-                out_file = self.argv[3]
+            if 2 == len(self.argv):
+                out_file = self.argv[1]
             self.logger.log( "[CHIPSEC] Dumping entire SPI Flash to '%s'" % out_file )
             # @TODO: don't assume SPI Flash always ends with BIOS region
             (base,limit,freg) = _spi.get_SPI_region( BIOS )

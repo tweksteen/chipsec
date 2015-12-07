@@ -40,12 +40,12 @@ class SMBusCommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print SMBusCommand.__doc__
             return
 
@@ -55,7 +55,7 @@ class SMBusCommand(BaseCommand):
             print msg
             return
 
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
 
         if not _smbus.is_SMBus_supported():
@@ -65,10 +65,10 @@ class SMBusCommand(BaseCommand):
         _smbus.display_SMBus_info()
 
         if ( 'read' == op ):
-            dev_addr  = int(self.argv[3],16)
-            start_off = int(self.argv[4],16)
-            if len(self.argv) > 5:
-                size   = int(self.argv[5],16)
+            dev_addr  = int(self.argv[1],16)
+            start_off = int(self.argv[2],16)
+            if len(self.argv) > 3:
+                size   = int(self.argv[3],16)
                 buf = _smbus.read_range( dev_addr, start_off, size )
                 self.logger.log( "[CHIPSEC] SMBus read: device 0x%X offset 0x%X size 0x%X" % (dev_addr, start_off, size) )
                 print_buffer( buf )
@@ -76,9 +76,9 @@ class SMBusCommand(BaseCommand):
                 val = _smbus.read_byte( dev_addr, start_off )
                 self.logger.log( "[CHIPSEC] SMBus read: device 0x%X offset 0x%X = 0x%X" % (dev_addr, start_off, val) )
         elif ( 'write' == op ):
-            dev_addr = int(self.argv[3],16)
-            off      = int(self.argv[4],16)
-            val      = int(self.argv[5],16)
+            dev_addr = int(self.argv[1],16)
+            off      = int(self.argv[2],16)
+            val      = int(self.argv[3],16)
             self.logger.log( "[CHIPSEC] SMBus write: device 0x%X offset 0x%X = 0x%X" % (dev_addr, off, val) )
             _smbus.write_byte( dev_addr, off, val )
         else:

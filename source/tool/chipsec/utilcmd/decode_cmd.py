@@ -64,20 +64,20 @@ class DecodeCommand(BaseCommand):
         return False
 
     def run(self):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print DecodeCommand.__doc__
             return
         
         _uefi = uefi.UEFI( self.cs )
-        if self.argv[2] == "types":
+        if self.argv[0] == "types":
             print "\n<fw_type> should be in [ %s ]\n" % ( " | ".join( ["%s" % t for t in uefi.fw_types] ) )
             return
             
-        rom_file = self.argv[2]
+        rom_file = self.argv[0]
 
         fwtype = ''
-        if 4 == len(self.argv):
-            fwtype = self.argv[3]
+        if 2 == len(self.argv):
+            fwtype = self.argv[1]
 
         self.logger.log( "[CHIPSEC] Decoding SPI ROM image from a file '%s'" % rom_file )
         t = time.time()

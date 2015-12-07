@@ -52,16 +52,16 @@ class CPUCommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
 
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             print CPUCommand.__doc__
             return
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
 
         try:
@@ -88,15 +88,15 @@ class CPUCommand(BaseCommand):
             self.logger.log( "          Number of CPU threads   : %d" % threads_count )
 
         elif 'cr' == op:
-            if len(self.argv) < 5:
+            if len(self.argv) < 3:
                 print CPUCommand.__doc__
                 return
 
-            cpu_thread_id = int(self.argv[3],10)
-            cr_number     = int(self.argv[4],16)
+            cpu_thread_id = int(self.argv[1],10)
+            cr_number     = int(self.argv[2],16)
 
-            if len(self.argv) > 5:
-                value = int(self.argv[5], 16)
+            if len(self.argv) > 3:
+                value = int(self.argv[3], 16)
                 self.logger.log( "[CHIPSEC] CPU: %d write CR%d <- 0x%08X" % (cpu_thread_id, cr_number, value) )
                 self.cs.cpu.write_cr( cpu_thread_id, cr_number, value )
                 return True

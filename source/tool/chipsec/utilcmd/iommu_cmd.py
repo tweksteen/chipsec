@@ -57,16 +57,16 @@ class IOMMUCommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
 
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             print IOMMUCommand.__doc__
             return
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
         
         try:
@@ -79,11 +79,11 @@ class IOMMUCommand(BaseCommand):
             self.logger.log( "[CHIPSEC] Enumerating supported IOMMU engines.." )
             self.logger.log( IOMMU_ENGINES.keys() )
         elif ( 'config' == op or 'status' == op or 'enable' == op or 'disable' == op ):
-            if len(self.argv) > 3:
-                if self.argv[3] in IOMMU_ENGINES.keys():
-                    _iommu_engines = [ self.argv[3] ]
+            if len(self.argv) > 1:
+                if self.argv[1] in IOMMU_ENGINES.keys():
+                    _iommu_engines = [ self.argv[1] ]
                 else:
-                    self.logger.error( "IOMMU name %s not recognized. Run 'iommu list' command for supported IOMMU names" % self.argv[3] )
+                    self.logger.error( "IOMMU name %s not recognized. Run 'iommu list' command for supported IOMMU names" % self.argv[1] )
                     return
             else:
                 _iommu_engines = IOMMU_ENGINES.keys()

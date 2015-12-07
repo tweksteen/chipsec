@@ -50,38 +50,38 @@ class MMIOCommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
         t = time.time()
 
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print MMIOCommand.__doc__
             return
 
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
 
         if ( 'list' == op ):
             list_MMIO_BARs( self.cs )
         elif ( 'dump' == op ):
-            bar = self.argv[3].upper()
+            bar = self.argv[1].upper()
             self.logger.log( "[CHIPSEC] Dumping %s MMIO space.." % bar )
             dump_MMIO_BAR( self.cs, bar )
         elif ( 'read' == op ):
-            bar   = self.argv[3].upper()
-            off   = int(self.argv[4],16)
-            width = int(self.argv[5],16) if len(self.argv) == 6 else 4
+            bar   = self.argv[1].upper()
+            off   = int(self.argv[2],16)
+            width = int(self.argv[3],16) if len(self.argv) == 4 else 4
             reg = read_MMIO_BAR_reg( self.cs, bar, off, width )
             self.logger.log( "[CHIPSEC] Read %s + 0x%X: 0x%08X" % (bar,off,reg) )
         elif ( 'write' == op ):
-            bar   = self.argv[3].upper()
-            off   = int(self.argv[4],16)
-            width = int(self.argv[5],16) if len(self.argv) == 6 else 4
-            if len(self.argv) == 7:
-                reg = int(self.argv[6],16)
+            bar   = self.argv[1].upper()
+            off   = int(self.argv[2],16)
+            width = int(self.argv[3],16) if len(self.argv) == 4 else 4
+            if len(self.argv) == 5:
+                reg = int(self.argv[4],16)
                 self.logger.log( "[CHIPSEC] Write %s + 0x%X: 0x%08X" % (bar,off,reg) )
                 write_MMIO_BAR_reg( self.cs, bar, off, reg, width )
             else:

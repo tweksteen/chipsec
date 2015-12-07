@@ -32,6 +32,7 @@ import re
 import os
 import sys
 import time
+import getopt
 import importlib
 
 from chipsec.logger     import *
@@ -75,29 +76,30 @@ commands = {}
 
 class ChipsecUtil:
 
-    def __init__(self):
+    def __init__(self, argv):
         self.global_usage = "CHIPSEC UTILITIES\n\n" + \
                    "All numeric values are in hex\n" + \
                    "<width> is in {1, byte, 2, word, 4, dword}\n\n"
         self.commands = {}
+        self.argv = argv
         # determine if CHIPSEC is loaded as chipsec_*.exe or in python
         self.CHIPSEC_LOADED_AS_EXE = True if (hasattr(sys, "frozen") or hasattr(sys, "importers")) else False
 
 
-    def chipsec_util_help(self, argv):
+    def chipsec_util_help(self):
         """
         Shows the list of available command line extensions
         """
-        if len(argv) <= 2:
-            logger().log(  '\n[CHIPSEC] chipsec_util command-line extensions should be one of the following:' )
+        if len(self.argv) < 2:
+            logger().log(  '[CHIPSEC] chipsec_util command-line extensions should be one of the following:' )
             for cmd in sorted(self.commands.keys() + ['help']):
                 logger().log( '    %s' % cmd )
                 #logger().log( chipsec_util_commands[cmd]['help'] )
 
         else:
             print self.global_usage
-            print "\nHelp for %s command:\n" % argv[2]
-            print self.commands[argv[2]].__doc__
+            print "\nHelp for %s command:\n" % self.argv[1]
+            print self.commands[self.argv[1]].__doc__
 
     def f_mod_zip(self, x):
         ZIP_UTILCMD_RE = re.compile("^chipsec\/utilcmd\/\w+\.pyc$", re.IGNORECASE)
@@ -112,12 +114,18 @@ class ChipsecUtil:
     def map_modname(self, x):
         return x.split('.')[0]
 
+    def parse_args(self):
+        opts, self.argv = getopt.getopt(self.argv, 'v', ['verbose'])
+        for o, a in opts:
+            if o in ("-v", "--verbose"):
+                logger().VERBOSE = True
+                logger().HAL = True
+
     ##################################################################################
     # Entry point
     ##################################################################################
 
-
-    def main(self, argv):
+    def main(self):
         """
         Receives and executes the commands
         """
@@ -149,10 +157,12 @@ class ChipsecUtil:
                 logger().error( "Couldn't import util command extension '%s'" % cmd )
                 raise ImportError, msg
 
-        if 1 < len(argv):
-            cmd = argv[ 1 ]
+        self.parse_args()
+
+        if 0 < len(self.argv):
+            cmd = self.argv[0]
             if self.commands.has_key( cmd ):
-                comm = self.commands[cmd](argv, cs = _cs)
+                comm = self.commands[cmd](self.argv[1:], cs = _cs)
                 try:
                     _cs.init( _Platform, comm.requires_driver())
                 except UnknownChipsetError, msg:
@@ -170,18 +180,18 @@ class ChipsecUtil:
                     logger().error("This module requires the kernel driver which is not loaded.")
                     logger().error("Aborting.")
                 else:
-                    logger().log( "[CHIPSEC] Executing command '%s' with args %s\n" % (cmd,argv[2:]) )
+                    logger().log( "[CHIPSEC] Executing command '%s' with args %s" % (cmd, self.argv[1:]) )
                     comm.run()
                     _cs.destroy(True)
 
             elif cmd == 'help':
-                self.chipsec_util_help(argv)
+                self.chipsec_util_help()
             else:
                 logger().error( "Unknown command '%.32s'" % cmd )
                 exit_code = EC_UNKNOWN_COMMAND
         else:
             logger().error( "Not enough parameters" )
-            self.chipsec_util_help([])
+            self.chipsec_util_help()
             exit_code = EC_NOT_ENOUGH_PARAMETERS
         return exit_code
 
@@ -205,8 +215,8 @@ class ChipsecUtil:
 
         
 if __name__ == "__main__":
-    argv = sys.argv
-    chipsecUtil = ChipsecUtil()
+    argv = sys.argv[1:]
+    chipsecUtil = ChipsecUtil(argv)
     chipsecUtil.print_banner()
-    ec = chipsecUtil.main(argv)
+    ec = chipsecUtil.main()
     sys.exit(ec)

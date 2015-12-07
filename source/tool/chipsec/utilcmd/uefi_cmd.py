@@ -75,43 +75,43 @@ class UEFICommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
 
         _uefi = UEFI( self.cs )
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print UEFICommand.__doc__
             return
         
-        if self.argv[2] == "types":
+        if self.argv[0] == "types":
             print "\n<fw_type> should be in [ %s ]\n" % (" | ".join( ["%s" % t for t in fw_types])) + \
             "chipsec_util uefi keys <keyvar_file>\n" + \
             "                  <keyvar_file> should be one of the following EFI variables\n" + \
             "                  [ %s ]\n" % (" | ".join( ["%s" % var for var in SECURE_BOOT_KEY_VARIABLES]))
             return
             
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
 
         filename = None
         if ( 'var-read' == op ):
-            if (4 < len(self.argv)):
-                name = self.argv[3]
-                guid = self.argv[4]
-            if (5 < len(self.argv)):
-                filename = self.argv[5]
+            if (2 < len(self.argv)):
+                name = self.argv[1]
+                guid = self.argv[2]
+            if (3 < len(self.argv)):
+                filename = self.argv[3]
             self.logger.log( "[CHIPSEC] Reading EFI variable Name='%s' GUID={%s} to '%s' via Variable API.." % (name, guid, filename) )
             var = _uefi.get_EFI_variable( name, guid, filename )
 
         elif ( 'var-write' == op ):
 
-            if (5 < len(self.argv)):
-                name = self.argv[3]
-                guid = self.argv[4]
-                filename = self.argv[5]
+            if (3 < len(self.argv)):
+                name = self.argv[1]
+                guid = self.argv[2]
+                filename = self.argv[3]
             else:
                 print UEFICommand.__doc__
                 return
@@ -125,9 +125,9 @@ class UEFICommand(BaseCommand):
 
         elif ( 'var-delete' == op ):
 
-            if (4 < len(self.argv)):
-                name = self.argv[3]
-                guid = self.argv[4]
+            if (2 < len(self.argv)):
+                name = self.argv[1]
+                guid = self.argv[2]
             else:
                 print UEFICommand.__doc__
                 return
@@ -140,8 +140,8 @@ class UEFICommand(BaseCommand):
         elif ( 'var-list' == op ):
 
             #infcls = 2
-            #if (3 < len(self.argv)): filename = self.argv[3]
-            #if (4 < len(self.argv)): infcls = int(self.argv[4],16)
+            #if (1 < len(self.argv)): filename = self.argv[1]
+            #if (2 < len(self.argv)): infcls = int(self.argv[2],16)
             self.logger.log( "[CHIPSEC] Enumerating all EFI variables via OS specific EFI Variable API.." )
             efi_vars = _uefi.list_EFI_variables()
             if efi_vars is None:
@@ -172,7 +172,7 @@ class UEFICommand(BaseCommand):
                 self.logger.log_warning( 'Could not enumerate UEFI variables (non-UEFI OS?)' )
                 return
 
-            _input_var = self.argv[3]
+            _input_var = self.argv[1]
             if ('-' in _input_var):
                 self.logger.log( "[*] Searching for UEFI variable with GUID {%s}.." % _input_var )
                 for name in _vars:
@@ -197,8 +197,8 @@ class UEFICommand(BaseCommand):
         elif ( 'nvram' == op or 'nvram-auth' == op ):
 
             authvars = ('nvram-auth' == op)
-            efi_nvram_format = self.argv[3]
-            if (4 == len(self.argv)):
+            efi_nvram_format = self.argv[1]
+            if (2 == len(self.argv)):
                 self.logger.log( "[CHIPSEC] Extracting EFI Variables directly in SPI ROM.." )
                 try:
                     self.cs.init( True )
@@ -216,8 +216,8 @@ class UEFICommand(BaseCommand):
                 rom = _spi.read_spi( bios_base, bios_size )
                 self.cs.stop( True )
                 del _spi
-            elif (5 == len(self.argv)):
-                romfilename = self.argv[4]
+            elif (3 == len(self.argv)):
+                romfilename = self.argv[2]
                 self.logger.log( "[CHIPSEC] Extracting EFI Variables from ROM file '%s'" % romfilename )
                 rom = read_file( romfilename )
 
@@ -228,9 +228,9 @@ class UEFICommand(BaseCommand):
 
         elif ( 'decode' == op ):
 
-            if (4 < len(self.argv)):
-                filename = self.argv[3]
-                fwtype = self.argv[4]
+            if (2 < len(self.argv)):
+                filename = self.argv[1]
+                fwtype = self.argv[2]
             else:
                 print UEFICommand.__doc__
                 return
@@ -243,8 +243,8 @@ class UEFICommand(BaseCommand):
 
         elif ( 'keys' == op ):
 
-            if (3 < len(self.argv)):
-                var_filename = self.argv[ 3 ]
+            if (1 < len(self.argv)):
+                var_filename = self.argv[ 1 ]
             else:
                 print UEFICommand.__doc__
                 return
@@ -257,8 +257,8 @@ class UEFICommand(BaseCommand):
 
         elif ( 's3bootscript' == op ):
             self.logger.log( "[CHIPSEC] Searching for and parsing S3 resume bootscripts.." )
-            if len(self.argv) > 3:
-                bootscript_pa = int(self.argv[3],16)
+            if len(self.argv) > 1:
+                bootscript_pa = int(self.argv[1],16)
                 self.logger.log( '[*] Reading S3 boot-script from memory at 0x%016X..' % bootscript_pa )
                 script_all = self.cs.mem.read_physical_mem( bootscript_pa, 0x100000 )
                 self.logger.log( '[*] Decoding S3 boot-script opcodes..' )
@@ -268,11 +268,11 @@ class UEFICommand(BaseCommand):
 
         elif op in ['insert_before', 'insert_after', 'replace']:
 
-            if len(self.argv) < 7:
+            if len(self.argv) < 5:
                 print UEFICommand.__doc__
                 return
 
-            (guid, rom_file, new_file, efi_file) = self.argv[3:7]
+            (guid, rom_file, new_file, efi_file) = self.argv[1:5]
 
             commands = {
                 'insert_before' :  CMD_UEFI_FILE_INSERT_BEFORE,
@@ -299,11 +299,11 @@ class UEFICommand(BaseCommand):
 
         elif op == 'remove':
 
-            if len(self.argv) < 6:
+            if len(self.argv) < 4:
                 print UEFICommand.__doc__
                 return
 
-            (guid, rom_file, new_file) = self.argv[3:6]
+            (guid, rom_file, new_file) = self.argv[1:4]
 
             if get_guid_bin(guid) == '':
                 print '*** Error *** Invalid GUID: %s' % guid
@@ -321,11 +321,11 @@ class UEFICommand(BaseCommand):
 
             compression = {'none': 0, 'tiano': 1, 'lzma': 2}
 
-            if len(self.argv) < 8:
+            if len(self.argv) < 6:
                 print UEFICommand.__doc__
                 return
 
-            (guid, file_type, comp, raw_file, efi_file) = self.argv[3:8]
+            (guid, file_type, comp, raw_file, efi_file) = self.argv[1:6]
 
             if get_guid_bin(guid) == '':
                 print '*** Error *** Invalid GUID: %s' % guid

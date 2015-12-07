@@ -42,12 +42,12 @@ class CMOSCommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print CMOSCommand.__doc__
             return
 
@@ -57,28 +57,28 @@ class CMOSCommand(BaseCommand):
             print msg
             return
 
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
 
         if ( 'dump' == op ):
             self.logger.log( "[CHIPSEC] Dumping CMOS memory.." )
             _cmos.dump()
         elif ( 'readl' == op ):
-            off = int(self.argv[3],16)
+            off = int(self.argv[1],16)
             val = _cmos.read_cmos_low( off )
             self.logger.log( "[CHIPSEC] CMOS low byte 0x%X = 0x%X" % (off, val) )
         elif ( 'writel' == op ):
-            off = int(self.argv[3],16)
-            val = int(self.argv[4],16)
+            off = int(self.argv[1],16)
+            val = int(self.argv[2],16)
             self.logger.log( "[CHIPSEC] Writing CMOS low byte 0x%X <- 0x%X " % (off, val) )
             _cmos.write_cmos_low( off, val )
         elif ( 'readh' == op ):
-            off = int(self.argv[3],16)
+            off = int(self.argv[1],16)
             val = _cmos.read_cmos_high( off )
             self.logger.log( "[CHIPSEC] CMOS high byte 0x%X = 0x%X" % (off, val) )
         elif ( 'writeh' == op ):
-            off = int(self.argv[3],16)
-            val = int(self.argv[4],16)
+            off = int(self.argv[1],16)
+            val = int(self.argv[2],16)
             self.logger.log( "[CHIPSEC] Writing CMOS high byte 0x%X <- 0x%X " % (off, val) )
             _cmos.write_cmos_high( off, val )
         else:

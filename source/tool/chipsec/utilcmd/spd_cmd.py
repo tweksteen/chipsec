@@ -46,12 +46,12 @@ class SPDCommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print SPDCommand.__doc__
             return
 
@@ -62,7 +62,7 @@ class SPDCommand(BaseCommand):
             print msg
             return
 
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
 
         if not _smbus.is_SMBus_supported():
@@ -79,9 +79,9 @@ class SPDCommand(BaseCommand):
 
         elif( 'dump' == op ):
 
-            if len(self.argv) > 3:
-                dev = self.argv[3].upper()
-                dev_addr = chipsec.hal.spd.SPD_DIMM_ADDRESSES[ dev ] if dev in chipsec.hal.spd.SPD_DIMM_ADDRESSES else int(self.argv[3],16)
+            if len(self.argv) > 1:
+                dev = self.argv[1].upper()
+                dev_addr = chipsec.hal.spd.SPD_DIMM_ADDRESSES[ dev ] if dev in chipsec.hal.spd.SPD_DIMM_ADDRESSES else int(self.argv[1],16)
                 if not _spd.isSPDPresent( dev_addr ):
                     self.logger.log( "[CHIPSEC] SPD for DIMM 0x%X is not found" % dev_addr )
                     return
@@ -92,19 +92,19 @@ class SPDCommand(BaseCommand):
      
         elif( 'read' == op ) or ( 'write' == op ):
 
-            if len(self.argv) > 3:
-                dev = self.argv[3].upper()
-                dev_addr = chipsec.hal.spd.SPD_DIMM_ADDRESSES[ dev ] if dev in chipsec.hal.spd.SPD_DIMM_ADDRESSES else int(self.argv[3],16)
+            if len(self.argv) > 1:
+                dev = self.argv[1].upper()
+                dev_addr = chipsec.hal.spd.SPD_DIMM_ADDRESSES[ dev ] if dev in chipsec.hal.spd.SPD_DIMM_ADDRESSES else int(self.argv[1],16)
             if not _spd.isSPDPresent( dev_addr ):
                 self.logger.log( "[CHIPSEC] SPD for DIMM 0x%X is not found" % dev_addr )
                 return
 
-            off = int(self.argv[4],16)
+            off = int(self.argv[2],16)
             if( 'read' == op ):
                 val      = _spd.read_byte( off, dev_addr )
                 self.logger.log( "[CHIPSEC] SPD read: offset 0x%X = 0x%X" % (off, val) )
             elif( 'write' == op ):
-                val      = int(self.argv[5],16)
+                val      = int(self.argv[3],16)
                 self.logger.log( "[CHIPSEC] SPD write: offset 0x%X = 0x%X" % (off, val) )
                 _spd.write_byte( off, val, dev_addr )
 

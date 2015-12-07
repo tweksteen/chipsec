@@ -49,16 +49,16 @@ class PCICommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print PCICommand.__doc__
             return
 
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
 
         if ( 'enumerate' == op ):
@@ -68,28 +68,28 @@ class PCICommand(BaseCommand):
             return
 
         try:
-            bus         = int(self.argv[2],16)
-            device      = int(self.argv[3],16)
-            function    = int(self.argv[4],16)
-            offset      = int(self.argv[5],16)
+            bus         = int(self.argv[0],16)
+            device      = int(self.argv[1],16)
+            function    = int(self.argv[2],16)
+            offset      = int(self.argv[3],16)
 
-            if 6 == len(self.argv):
+            if 4 == len(self.argv):
                 width = 1
             else:
-                if 'byte' == self.argv[6]:
+                if 'byte' == self.argv[4]:
                     width = 1
-                elif 'word' == self.argv[6]:
+                elif 'word' == self.argv[4]:
                     width = 2
-                elif 'dword' == self.argv[6]:
+                elif 'dword' == self.argv[4]:
                     width = 4
                 else:
-                    width = int(self.argv[6])
+                    width = int(self.argv[4])
         except Exception as e :
             print PCICommand.__doc__
             return
 
-        if 8 == len(self.argv):
-            value = int(self.argv[7], 16)
+        if 6 == len(self.argv):
+            value = int(self.argv[5], 16)
             if 1 == width:
                 self.cs.pci.write_byte( bus, device, function, offset, value )
             elif 2 == width:

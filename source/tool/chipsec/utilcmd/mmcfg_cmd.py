@@ -53,39 +53,39 @@ class MMCfgCommand(BaseCommand):
     def run(self):
         t = time.time()
 
-        if 2 == len(self.argv):
+        if 0 == len(self.argv):
             #pciexbar = get_PCIEXBAR_base_address( self.cs )
             pciexbar = get_MMCFG_base_address( self.cs )
             self.logger.log( "[CHIPSEC] Memory Mapped Config Base: 0x%016X" % pciexbar )
             return
-        elif 6 > len(self.argv):
+        elif 4 > len(self.argv):
             print MMCfgCommand.__doc__
             return
 
         try:
-            bus         = int(self.argv[2],16)
-            device      = int(self.argv[3],16)
-            function    = int(self.argv[4],16)
-            offset      = int(self.argv[5],16)
+            bus         = int(self.argv[0],16)
+            device      = int(self.argv[1],16)
+            function    = int(self.argv[2],16)
+            offset      = int(self.argv[3],16)
 
-            if 6 == len(self.argv):
+            if 4 == len(self.argv):
                 width = 1
             else:
-                if 'byte' == self.argv[6]:
+                if 'byte' == self.argv[4]:
                     width = 1
-                elif 'word' == self.argv[6]:
+                elif 'word' == self.argv[4]:
                     width = 2
-                elif 'dword' == self.argv[6]:
+                elif 'dword' == self.argv[4]:
                     width = 4
                 else:
-                    width = int(self.argv[6])
+                    width = int(self.argv[4])
 
         except Exception as e :
             print MMCfgCommand.__doc__
             return
 
-        if 8 == len(self.argv):
-            value = int(self.argv[7], 16)
+        if 6 == len(self.argv):
+            value = int(self.argv[5], 16)
             write_mmcfg_reg( self.cs, bus, device, function, offset, width, value )
             #_cs.pci.write_mmcfg_reg( bus, device, function, offset, width, value )
             self.logger.log( "[CHIPSEC] writing MMCFG register (%02d:%02d.%d + 0x%02X): 0x%X" % (bus, device, function, offset, value) )

@@ -40,16 +40,16 @@ class CPUIDCommand(BaseCommand):
     >>> chipsec_util cpuid 40000000
     """
 
-    def reuquires_driver(self):
+    def requires_driver(self):
         return True
 
     def run(sel):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print CPUIDCommand.__doc__
             return
 
-        eax = int(self.argv[2],16)
-        ecx = int(self.argv[3],16) if 4 == len(self.argv) else 0
+        eax = int(self.argv[0],16)
+        ecx = int(self.argv[1],16) if 2 == len(self.argv) else 0
 
         self.logger.log( "[CHIPSEC] CPUID < EAX: 0x%08X" % eax)
         self.logger.log( "[CHIPSEC]         ECX: 0x%08X" % ecx)

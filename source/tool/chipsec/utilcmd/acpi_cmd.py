@@ -52,16 +52,16 @@ class ACPICommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             return False
         return True
 
     def run(self):
 
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             print self.__doc__
             return
-        op = self.argv[2]
+        op = self.argv[0]
         t = time.time()
         
         try:
@@ -74,10 +74,10 @@ class ACPICommand(BaseCommand):
             self.logger.log( "[CHIPSEC] Enumerating ACPI tables.." )
             _acpi.print_ACPI_table_list()      
         elif ( 'table' == op ):
-            if len(self.argv) < 4:
+            if len(self.argv) < 2:
                 print ACPICommand.__doc__
                 return
-            name = self.argv[ 3 ]
+            name = self.argv[ 1 ]
             if name in ACPI_TABLES:
                 if _acpi.is_ACPI_table_present( name ):
                     self.logger.log( "[CHIPSEC] reading ACPI table '%s'" % name )

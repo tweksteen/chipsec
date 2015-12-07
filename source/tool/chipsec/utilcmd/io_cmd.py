@@ -54,12 +54,12 @@ class PortIOCommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(sys.argv) < 3:
+        if len(sys.argv) < 1:
             return False
         return True
 
     def run(self):
-        if 3 > len(self.argv):
+        if 1 > len(self.argv):
             print PortIOCommand.__doc__
             return
 
@@ -69,25 +69,25 @@ class PortIOCommand(BaseCommand):
             print msg
             return
 
-        op = self.argv[2]
+        op = self.argv[0]
         if ( 'list' == op ):
             _iobar.list_IO_BARs()
             return
 
         t = time.time()
 
-        if len(self.argv) < 3:
+        if len(self.argv) < 1:
             print PortIOCommand.__doc__
             return
 
-        io_port = int(self.argv[2],16)
+        io_port = int(self.argv[0],16)
 
         width = 0x1
-        if len(self.argv) > 3: 
-            width = chipsec_util.get_option_width(self.argv[3]) if chipsec_util.is_option_valid_width(self.argv[3]) else int(self.argv[3],16)
+        if len(self.argv) > 1: 
+            width = chipsec_util.get_option_width(self.argv[1]) if chipsec_util.is_option_valid_width(self.argv[1]) else int(self.argv[1],16)
 
-        if 5 == len(self.argv):
-            value = int(self.argv[4], 16)
+        if 3 == len(self.argv):
+            value = int(self.argv[2], 16)
             self.logger.log( "[CHIPSEC] OUT 0x%04X <- 0x%08X (size = 0x%02x)" % (io_port, value, width) )
             if   0x1 == width: self.cs.io.write_port_byte( io_port, value )
             elif 0x2 == width: self.cs.io.write_port_word( io_port, value )
