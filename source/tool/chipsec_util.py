@@ -52,6 +52,10 @@ logger().HAL        = False
 # _Platform = 'SNB'
 _Platform = None
 
+EC_GENERIC = 1
+EC_UNKNOWN_PLATFORM = 2
+EC_UNKNOWN_COMMAND = 3
+EC_NOT_ENOUGH_PARAMETERS = 32
 
 #CMD_OPTS_WIDTH = [ 'byte', 'word', 'dword', 'qword' ]
 CMD_OPTS_WIDTH = [ 'byte', 'word', 'dword' ]
@@ -157,9 +161,10 @@ class ChipsecUtil:
                     logger().warn("* Platform dependent functionality will likely be incorrect")
                     logger().warn("* Error Message: \"%s\"" % str(msg))
                     logger().warn("*******************************************************************")
+                    return EC_UNKNOWN_PLATFORM
                 except (None,Exception) , msg:
                     logger().error(str(msg))
-                    exit(-1)
+                    return EC_GENERIC
 
                 if comm.requires_driver() and not helper().is_driver_loaded():
                     logger().error("This module requires the kernel driver which is not loaded.")
@@ -173,10 +178,11 @@ class ChipsecUtil:
                 self.chipsec_util_help(argv)
             else:
                 logger().error( "Unknown command '%.32s'" % cmd )
+                exit_code = EC_UNKNOWN_COMMAND
         else:
             logger().error( "Not enough parameters" )
             self.chipsec_util_help([])
-            exit_code = 32
+            exit_code = EC_NOT_ENOUGH_PARAMETERS
         return exit_code
 
     def set_logfile(self, logfile):
@@ -204,5 +210,3 @@ if __name__ == "__main__":
     chipsecUtil.print_banner()
     ec = chipsecUtil.main(argv)
     sys.exit(ec)
-
-
