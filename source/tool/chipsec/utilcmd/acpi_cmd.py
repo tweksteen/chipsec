@@ -28,9 +28,11 @@ Command-line utility providing access to ACPI tables
 __version__ = '1.0'
 
 import os
+import platform
 import time
 
 from chipsec.hal.acpi   import *
+from chipsec.helper.oshelper import helper
 from chipsec.command    import BaseCommand
 
 # ###################################################################
@@ -52,7 +54,7 @@ class ACPICommand(BaseCommand):
     """
 
     def requires_driver(self):
-        if len(self.argv) < 1:
+        if len(self.argv) < 1 or helper().is_linux():
             return False
         return True
 
