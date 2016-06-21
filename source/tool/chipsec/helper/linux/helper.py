@@ -187,12 +187,33 @@ class LinuxHelper(Helper):
 
 
     def mem_read_block(self, addr, sz):
-        if(addr != None): self.dev_fh.seek(addr)
-        return self.__mem_block(sz)
+        if self.driver_loaded:
+            if(addr != None): self.dev_fh.seek(addr)
+            return self.__mem_block(sz)
+        else:
+            m = self.memory_mapping(addr, sz)
+            if not m:
+                os.lseek(self.dev_mem, addr, os.SEEK_SET)
+                x = os.read(self.dev_mem, sz)
+            else:
+                m.seek(addr - m.start)
+                x = m.read(sz)
+            return x
 
     def mem_write_block(self, addr, sz, newval):
-        if(addr != None): self.dev_fh.seek(addr)
-        return self.__mem_block(sz, newval)
+        if self.driver_loaded:
+            if(addr != None): self.dev_fh.seek(addr)
+            return self.__mem_block(sz, newval)
+        else:
+            m = self.memory_mapping(addr, sz)
+            if not m:
+                os.lseek(self.dev_mem, addr, os.SEEK_SET)
+                written = os.write(self.dev_mem, newval)
+                if written != sz:
+                    logger().error("Cannot write %s fully to memory at %016X" % (newval, addr))
+            else:
+                m.seek(addr - m.start)
+                m.write(newval)
 
     def write_phys_mem(self, phys_address_hi, phys_address_lo, sz, newval):
         if(newval == None): return None
