@@ -38,6 +38,7 @@ __version__ = '0.1'
 import struct
 import sys
 
+from collections import defaultdict
 from collections import namedtuple
 
 from chipsec.logger import *
@@ -115,7 +116,7 @@ ACPI_TABLES = {
   ACPI_TABLE_SIG_ROOT: chipsec.hal.acpi_tables.ACPI_TABLE,
   ACPI_TABLE_SIG_RSDT: chipsec.hal.acpi_tables.RSDT,
   ACPI_TABLE_SIG_XSDT: chipsec.hal.acpi_tables.XSDT,
-  ACPI_TABLE_SIG_FACP: chipsec.hal.acpi_tables.ACPI_TABLE,
+  ACPI_TABLE_SIG_FACP: chipsec.hal.acpi_tables.FADT,
   ACPI_TABLE_SIG_FACS: chipsec.hal.acpi_tables.ACPI_TABLE,
   ACPI_TABLE_SIG_DSDT: chipsec.hal.acpi_tables.ACPI_TABLE,
   ACPI_TABLE_SIG_SSDT: chipsec.hal.acpi_tables.ACPI_TABLE,
@@ -204,7 +205,7 @@ class ACPI:
     def __init__( self, cs ):
         self.cs     = cs
         self.uefi   = chipsec.hal.uefi.UEFI( self.cs )
-        self.tableList = {}
+        self.tableList = defaultdict(list)
         self.get_ACPI_table_list()
  
     #
@@ -331,16 +332,57 @@ class ACPI:
         (is_xsdt,sdt_pa,sdt,sdt_header) = self.get_SDT()
 
         # cache RSDT/XSDT in the list of ACPI tables
-        if sdt_pa is not None: self.tableList[ sdt_header.Signature ] = sdt_pa
+        if sdt_pa is not None: self.tableList[ sdt_header.Signature ].append(sdt_pa)
 
-        # cache other ACPI tables in the list
+        self.get_table_list_from_SDT(sdt, is_xsdt)
+
+        if ACPI_TABLE_SIG_FACP in self.tableList:
+            self.get_DSDT_from_FADT()
+        else:
+            logger().warn( 'Cannot find FADT in %s' % ('XSDT' if is_xsdt else 'RSDT') )
+
+        return self.tableList
+
+    #
+    # Gets table list from entries in RSDT/XSDT
+    #
+    def get_table_list_from_SDT(self, sdt, is_xsdt):
+        logger().log( 'Getting table list from entries in %s' % ('XSDT' if is_xsdt else 'RSDT') )
         for a in sdt.Entries:
             _sig = self.cs.mem.read_physical_mem( a, ACPI_TABLE_SIG_SIZE )
             if _sig not in ACPI_TABLES.keys():
                 logger().warn( 'Unknown ACPI table signature: %s' % _sig )
-            self.tableList[ _sig ] = a
+            self.tableList[ _sig ].append(a)
 
-        return self.tableList
+    #
+    # Gets DSDT from FADT
+    #
+    def get_DSDT_from_FADT(self):
+        logger().log( 'Getting DSDT from FADT' )
+
+        (_, parsed_fadt_content, _, _) = self.get_parse_ACPI_table('FACP')[0]
+        dsdt_address = parsed_fadt_content.dsdt
+        x_dsdt_address = parsed_fadt_content.x_dsdt
+        dsdt_address_to_use = None
+
+        if x_dsdt_address is None:
+            if dsdt_address != 0:
+                dsdt_address_to_use = dsdt_address
+        else:
+            if x_dsdt_address != 0 and dsdt_address == 0:
+                dsdt_address_to_use = x_dsdt_address
+            elif x_dsdt_address == 0 and dsdt_address != 0:
+                dsdt_address_to_use = dsdt_address
+            elif x_dsdt_address != 0 and x_dsdt_address == dsdt_address:
+                dsdt_address_to_use = x_dsdt_address
+
+        if dsdt_address_to_use is None:
+            logger().error( 'Unable to determine the correct DSDT address' )
+            logger().error( '  DSDT   address = %s' % ('0x%08X' % dsdt_address) )
+            logger().error( '  X_DSDT address = %s' % (('0x%016X' % x_dsdt_address) if x_dsdt_address is not None else 'Not found') )
+            return
+
+        self.tableList[ ACPI_TABLE_SIG_DSDT ].append(dsdt_address_to_use)
 
     #
     # Checks is ACPI table with <name> is available on the system
@@ -356,49 +398,57 @@ class ACPI:
             logger().error("Couldn't get list of ACPI tables")
         else:
             if logger().HAL: logger().log( "[acpi] Found the following ACPI tables:" )
-            for tableName in self.tableList.keys():
-                logger().log( " - %s: 0x%016X" % (tableName,self.tableList[tableName]) )
+            for tableName in sorted(self.tableList.keys()):
+                logger().log( " - %s: %s" % (tableName, ", ".join([("0x%016X" % addr) for addr in self.tableList[tableName]])) )
 
     #
     # Retrieves contents of ACPI table from memory or from file
     #
     def get_parse_ACPI_table( self, name, isfile = False ):
-        (table_header_blob,table_blob)=self.get_ACPI_table(name,isfile)
-        if table_header_blob is not None:
-            return self._parse_table( name, table_header_blob, table_blob )
-        
+        acpi_tables = self.get_ACPI_table(name, isfile)
+        return [self._parse_table( name, table_header_blob, table_blob ) for (table_header_blob, table_blob) in acpi_tables if table_header_blob is not None]
+
     def get_ACPI_table( self, name, isfile = False ):
-        table_header_blob  = None
-        table_blob = None
-        t_data = None
+        acpi_tables_data = []
         if isfile == True:
-            t_data = chipsec.file.read_file( name )
+            acpi_tables_data.append(self.cs.mem.read_physical_mem( name ))
         else:
-            t_size = self.cs.mem.read_physical_mem_dword( self.tableList[name] + 4 )
-            t_data = self.cs.mem.read_physical_mem( self.tableList[name], t_size )
+            for table_address in self.tableList[name]:
+                table_header_blob  = None
+                table_blob = None
+                t_data = None
+                t_size = self.cs.mem.read_physical_mem_dword( table_address + 4 )
+                t_data = self.cs.mem.read_physical_mem( table_address, t_size )
 
-        if t_data is not None:
-            table_header_blob  = t_data[ : ACPI_TABLE_HEADER_SIZE ]
-            table_blob         = t_data[ ACPI_TABLE_HEADER_SIZE : ]
+                acpi_tables_data.append( t_data )
 
-        return (table_header_blob,table_blob)
+        acpi_tables = []
+        for t_data in acpi_tables_data:
+            if t_data is not None:
+                table_header_blob  = t_data[ : ACPI_TABLE_HEADER_SIZE ]
+                table_blob         = t_data[ ACPI_TABLE_HEADER_SIZE : ]
+                acpi_tables.append((table_header_blob, table_blob))
+
+        return acpi_tables
     
     #
     # Dumps contents of ACPI table
     #
     def dump_ACPI_table( self, name, isfile = False ):
-        (table_header,table,table_header_blob,table_blob) = self.get_parse_ACPI_table( name, isfile )
-        logger().log( "==================================================================" )
-        logger().log( "ACPI Table: %s" % name )
-        logger().log( "==================================================================" )
-        # print table header
-        logger().log( table_header )
-        print_buffer( table_header_blob )
-        # print table contents
-        logger().log( '' )
-        logger().log( table )
-        print_buffer( table_blob )
-        logger().log( '' )
+        acpi_tables = self.get_parse_ACPI_table( name, isfile )
+        for acpi_table in acpi_tables:
+            (table_header,table,table_header_blob,table_blob) = acpi_table
+            logger().log( "==================================================================" )
+            logger().log( "ACPI Table: %s" % name )
+            logger().log( "==================================================================" )
+            # print table header
+            logger().log( table_header )
+            print_buffer( table_header_blob )
+            # print table contents
+            logger().log( '' )
+            logger().log( table )
+            print_buffer( table_blob )
+            logger().log( '' )
 
     # --------------------------------------------------------------------
     # Internal ACPI table parsing functions
