@@ -73,9 +73,9 @@ for current, dirs, files in os.walk(tool_dir ):
 
 
 setup(
-        name            = 'chipsec',
+        name            = 'grr-chipsec',
         description     = 'CHIPSEC: Platform Security Assessment Framework',
-        version         = '1.2.2',
+        version         = '1.2.2.2',
         author          = 'chipsec developers',
         author_email    = '',
         url             = 'https://github.com/chipsec/chipsec',
